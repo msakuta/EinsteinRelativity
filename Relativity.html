@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title>Einstein's Relativity Explaining Figure with JavaScript</title>
+	<meta charset="UTF-8" />
+	<script type="text/javascript" src="Relativity.js"></script>
+</head>
+<body>
+	<div id="header">
+		<h1>Einstein's Relativity Explaining Figure with JavaScript</h1>
+	</div>
+	<canvas id="scratch" width="400px" height="400px" style="width: 400px; height: 400px;">
+		<font size="+3" color="#ff0000">I'm sorry, but your browser seems not supporting HTML5 canvas. Try getting a modern browser and come again!</font>
+	</canvas>
+	<p>
+		<input type="checkbox" id="RotationCheck">Rotation<br>
+		<input type="checkbox" id="RelativeCheck">Relative<br>
+		Light Speeds (C): <span id="freq"></span>
+		<input type="edit" id="CEdit" value="0.3">
+		<input type="button" onclick="Relativity.submitC()" value="set">
+	</p>
+</body>
+</html>
