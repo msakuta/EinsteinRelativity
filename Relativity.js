@@ -67,11 +67,21 @@ window.addEventListener('load', function() {
 	height = parseInt(canvas.style.height);
 
 	draw();
+
+	// Animate (framerate could be subject to discuss)
+	window.setInterval(timerProc, 500);
 });
 
 var lightSpeed = 0.3;
 var relativity = false;
 var rotation = false;
+var time = 0;
+
+function timerProc(){
+	// Loop in 10 frames
+	time = (time + 1) % 10;
+	draw();
+}
 
 this.submitC = function(){
 
@@ -117,6 +127,33 @@ function draw() {
 		}
 	}
 
+	// Draw person shape on pos, annotated by name with color.
+	// Pos will be the position of feet.
+	function drawPerson(pos, name, color){
+		var headHeight = 50;
+		var headRadius = 10;
+		var handLength = 15;
+
+		ctx.font = "15px Arial";
+		ctx.fillStyle = color;
+		ctx.fillText(name, pos[0] - 5, pos[1] - headHeight + 5);
+
+		ctx.strokeStyle = color;
+		ctx.beginPath();
+		ctx.arc(pos[0], pos[1] - headHeight, headRadius, 0, 2*Math.PI);
+		ctx.moveTo(pos[0], pos[1] - headHeight + headRadius);
+		ctx.lineTo(pos[0], pos[1] - handLength);
+		ctx.moveTo(pos[0], pos[1] - headHeight + headRadius);
+		ctx.lineTo(pos[0] - handLength, pos[1] - headHeight + headRadius + handLength);
+		ctx.moveTo(pos[0], pos[1] - headHeight + headRadius);
+		ctx.lineTo(pos[0] + handLength, pos[1] - headHeight + headRadius + handLength);
+		ctx.moveTo(pos[0], pos[1] - handLength);
+		ctx.lineTo(pos[0] - handLength, pos[1]);
+		ctx.moveTo(pos[0], pos[1] - handLength);
+		ctx.lineTo(pos[0] + handLength, pos[1]);
+		ctx.stroke();
+	}
+
 	var offset = 100;
 	var arrowSize = 10;
 
@@ -124,6 +161,9 @@ function draw() {
 	var yhat0 = [0, height - 2 * offset];
 
 	ctx.clearRect(0,0,width,height);
+
+	// Draw person A (on fixed frame of reference)
+	drawPerson([offset - 30, 80], "A", "#000000");
 
 	ctx.strokeStyle = '#000000';
 	ctx.lineWidth = 2;
@@ -158,13 +198,43 @@ function draw() {
 	}
 	else if(relativity){
 		var beta = 1 / Math.sqrt(1 - lightSpeed * lightSpeed);
-		mat = [beta, lightSpeed, 0, beta * lightSpeed, beta, 0];
+		mat = [beta, beta * lightSpeed, 0, beta * lightSpeed, beta, 0];
 	}
 	else
 		mat = [1, lightSpeed, 0, 0, 1, 0];
 
 	var yhat = matvp(mat, yhat0);
 	var xhat = matvp(mat, xhat0);
+
+	// Current time coordinate
+	var cur = time / 10 * (height - 2 * offset);
+
+	// Base position of moving frame of reference seen from A
+	var bbase = [offset + matvp(mat, vecscale(yhat0, time / 10 / mat[0]))[0], 60];
+
+	// Set transform matrix for Lorenz contraction
+	ctx.setTransform(relativity ? 1 / beta : 1,0,0,1, bbase[0], 0);
+
+	// Draw person B and the board he's riding (on moving frame of reference)
+	drawPerson([30, bbase[1]], "B", "#0000ff");
+	ctx.beginPath();
+	ctx.rect(0, bbase[1], 60, 10);
+	ctx.fillStyle = "#7f7f00";
+	ctx.fill();
+	ctx.strokeStyle = "#000000";
+	ctx.stroke();
+
+	// Cast projection line onto the current time line.
+	ctx.beginPath();
+	ctx.moveTo(0, bbase[1] + 10);
+	ctx.lineTo(0, height - offset - cur);
+	ctx.moveTo(60, bbase[1] + 10);
+	ctx.lineTo(60, height - offset - cur);
+	ctx.stroke();
+
+	// Restore default transformation
+	ctx.setTransform(1,0,0,1,0,0);
+
 
 	ctx.font = "20px Arial";
 	ctx.fillStyle = "blue";
@@ -185,5 +255,9 @@ function draw() {
 	ctx.strokeStyle = '#bfbfff';
 	ctx.lineWidth = 1;
 	drawGrid(xhat, yhat);
+
+	// Draw current time line in red
+	ctx.strokeStyle = '#ff0000';
+	drawLine([0, cur], [width, cur]);
 }
 })();
