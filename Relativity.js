@@ -28,14 +28,14 @@ function vecdist(v1,v2){
 ///
 /// The function name stands for MATrix Vector Product
 function matvp(ma,vb){
-	return [ma[0] * vb[0] + ma[1] * vb[1] + ma[2], ma[3] * vb[0] + ma[4] * vb[1] + ma[5]];
+	return [ma[0] * vb[0] + ma[2] * vb[1] + ma[4], ma[1] * vb[0] + ma[3] * vb[1] + ma[5]];
 }
 
 /// @brief Product of a augmented 2-D matrix and a 2-D vector, ignoring offset term
 ///
 /// The function name stands for MATrix Delta Vector Product
 function matdvp(ma,vb){
-	return [ma[0] * vb[0] + ma[1] * vb[1], ma[3] * vb[0] + ma[4] * vb[1]];
+	return [ma[0] * vb[0] + ma[2] * vb[1], ma[1] * vb[0] + ma[3] * vb[1]];
 }
 
 /// \brief Calculates product of matrices
@@ -160,6 +160,20 @@ function draw() {
 	var xhat0 = [width - 2 * offset, 0];
 	var yhat0 = [0, height - 2 * offset];
 
+	var barWidth = 60;
+
+	var mat;
+	if(rotation){
+		var angle = 0.1 * Math.PI;
+		mat = [Math.cos(angle), -Math.sin(angle), Math.sin(angle), Math.cos(angle), 0, 0];
+	}
+	else if(relativity){
+		var beta = 1 / Math.sqrt(1 - lightSpeed * lightSpeed);
+		mat = [beta, beta * lightSpeed, beta * lightSpeed, beta, 0, 0];
+	}
+	else
+		mat = [1, 0, lightSpeed, 1, 0, 0];
+
 	ctx.clearRect(0,0,width,height);
 
 	// Draw person A (on fixed frame of reference)
@@ -190,18 +204,6 @@ function draw() {
 	ctx.strokeStyle = '#bfbfbf';
 	ctx.lineWidth = 1;
 	drawGrid(xhat0, yhat0);
-
-	var mat;
-	if(rotation){
-		var angle = 0.1 * Math.PI;
-		mat = [Math.cos(angle), Math.sin(angle), 0, -Math.sin(angle), Math.cos(angle), 0];
-	}
-	else if(relativity){
-		var beta = 1 / Math.sqrt(1 - lightSpeed * lightSpeed);
-		mat = [beta, beta * lightSpeed, 0, beta * lightSpeed, beta, 0];
-	}
-	else
-		mat = [1, lightSpeed, 0, 0, 1, 0];
 
 	var yhat = matvp(mat, yhat0);
 	var xhat = matvp(mat, xhat0);
