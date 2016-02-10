@@ -116,7 +116,27 @@ function draw() {
 		ctx.stroke();
 	}
 
-	function drawGrid(xhat, yhat){
+	// Draw axes and grid
+	function drawAxes(mat, xhat, yhat, dash){
+		ctx.strokeStyle = dash ? "#0000ff" : "#000000";
+		ctx.lineWidth = 2;
+
+		drawLine([0,0], yhat);
+		drawLine(yhat, vecadd(yhat, matdvp(mat, [-arrowSize, -arrowSize])));
+		drawLine(yhat, vecadd(yhat, matdvp(mat, [arrowSize, -arrowSize])));
+
+		drawLine([0,0], xhat);
+		drawLine(xhat, vecadd(xhat, matdvp(mat, [-arrowSize, -arrowSize])));
+		drawLine(xhat, vecadd(xhat, matdvp(mat, [-arrowSize, arrowSize])));
+
+		ctx.font = "20px Arial";
+		ctx.fillStyle = dash ? "#0000ff" : "#000000";
+		ctx.fillText(dash ? "t'" : "t", offset + yhat[0], height - offset - yhat[1] - 10);
+		ctx.fillText(dash ? "x'" : "x", offset + xhat[0] + 10, height - offset - xhat[1] + 10 + (dash ? -20 : 0));
+
+		ctx.strokeStyle = dash ? "#bfbfff" : "#bfbfbf";
+		ctx.lineWidth = 1;
+
 		for(var y = 1; y < 10; y++){
 			var vec = vecscale(yhat, y / 10);
 			drawLine(vec, vecadd(vec, xhat));
@@ -154,13 +174,25 @@ function draw() {
 		ctx.stroke();
 	}
 
+	function setTransform(mat){
+		ctx.setTransform(mat[0], mat[1], mat[2], mat[3], mat[4], mat[5]);
+	}
+
+	function setIdentity(){
+		ctx.setTransform(1, 0, 0, 1, 0, 0);
+	}
+
 	var offset = 100;
 	var arrowSize = 10;
+	var xaxis = width - 2.5 * offset;
+	var yaxis = height - 2.5 * offset;
 
-	var xhat0 = [width - 2 * offset, 0];
-	var yhat0 = [0, height - 2 * offset];
+	var xhat0 = [xaxis, 0];
+	var yhat0 = [0, yaxis];
 
 	var barWidth = 60;
+
+	var worldMat = [1, 0, 0, -1, offset, height - offset];
 
 	var mat;
 	if(rotation){
@@ -174,53 +206,42 @@ function draw() {
 	else
 		mat = [1, 0, lightSpeed, 1, 0, 0];
 
+	var prodMat = matmp(worldMat, mat);
+
 	ctx.clearRect(0,0,width,height);
+
+	// Set transform matrix for Lorenz contraction
+	setTransform(prodMat);
+
+	// Fill the area of the moving bar's world line
+	ctx.beginPath();
+	ctx.rect(0, 0, barWidth, yhat0[1]);
+	ctx.fillStyle = "#ffff7f";
+	ctx.fill();
+
+	setIdentity();
 
 	// Draw person A (on fixed frame of reference)
 	drawPerson([offset - 30, 80], "A", "#000000");
 
-	ctx.strokeStyle = '#000000';
-	ctx.lineWidth = 2;
-
-	ctx.beginPath();
-	ctx.moveTo(offset, height);
-	ctx.lineTo(offset, offset);
-	ctx.lineTo(offset - arrowSize, offset + arrowSize);
-	ctx.moveTo(offset, offset);
-	ctx.lineTo(offset + arrowSize, offset + arrowSize);
-
-	ctx.moveTo(0, height - offset);
-	ctx.lineTo(width - offset, height - offset);
-	ctx.lineTo(width - (offset + arrowSize), height - (offset - arrowSize));
-	ctx.moveTo(width - offset, height - offset);
-	ctx.lineTo(width - (offset + arrowSize), height - (offset + arrowSize));
-	ctx.stroke();
-
-	ctx.font = "20px Arial";
-	ctx.fillStyle = "black";
-	ctx.fillText("t", offset, offset - 10);
-	ctx.fillText("x", width - offset + 10, height - offset + 10);
-
-	ctx.strokeStyle = '#bfbfbf';
-	ctx.lineWidth = 1;
-	drawGrid(xhat0, yhat0);
+	drawAxes([1,0,0,1,0,0], xhat0, yhat0);
 
 	var yhat = matvp(mat, yhat0);
 	var xhat = matvp(mat, xhat0);
 
 	// Current time coordinate
-	var cur = time / 10 * (height - 2 * offset);
+	var cur = time / 10 * yaxis;
 
 	// Base position of moving frame of reference seen from A
 	var bbase = [offset + matvp(mat, vecscale(yhat0, time / 10 / mat[0]))[0], 60];
 
 	// Set transform matrix for Lorenz contraction
-	ctx.setTransform(relativity ? 1 / beta : 1,0,0,1, bbase[0], 0);
+	ctx.setTransform(!rotation && relativity ? 1 / beta : 1,0,0,1, bbase[0], 0);
 
 	// Draw person B and the board he's riding (on moving frame of reference)
 	drawPerson([30, bbase[1]], "B", "#0000ff");
 	ctx.beginPath();
-	ctx.rect(0, bbase[1], 60, 10);
+	ctx.rect(0, bbase[1], barWidth, 10);
 	ctx.fillStyle = "#7f7f00";
 	ctx.fill();
 	ctx.strokeStyle = "#000000";
@@ -230,33 +251,14 @@ function draw() {
 	ctx.beginPath();
 	ctx.moveTo(0, bbase[1] + 10);
 	ctx.lineTo(0, height - offset - cur);
-	ctx.moveTo(60, bbase[1] + 10);
-	ctx.lineTo(60, height - offset - cur);
+	ctx.moveTo(barWidth, bbase[1] + 10);
+	ctx.lineTo(barWidth, height - offset - cur);
 	ctx.stroke();
 
 	// Restore default transformation
-	ctx.setTransform(1,0,0,1,0,0);
+	setIdentity();
 
-
-	ctx.font = "20px Arial";
-	ctx.fillStyle = "blue";
-	ctx.fillText("t'", yhat[0] + offset, height - offset - yhat[1] - 10);
-	ctx.fillText("x'", xhat[0] + offset + 10, height - offset - xhat[1] - 10);
-
-	ctx.strokeStyle = '#0000ff';
-	ctx.lineWidth = 2;
-
-	drawLine([0,0], yhat);
-	drawLine(yhat, vecadd(yhat, matdvp(mat, [-arrowSize, -arrowSize])));
-	drawLine(yhat, vecadd(yhat, matdvp(mat, [arrowSize, -arrowSize])));
-
-	drawLine([0,0], xhat);
-	drawLine(xhat, vecadd(xhat, matdvp(mat, [-arrowSize, -arrowSize])));
-	drawLine(xhat, vecadd(xhat, matdvp(mat, [-arrowSize, arrowSize])));
-
-	ctx.strokeStyle = '#bfbfff';
-	ctx.lineWidth = 1;
-	drawGrid(xhat, yhat);
+	drawAxes(mat, xhat, yhat, true);
 
 	// Draw current time line in red
 	ctx.strokeStyle = '#ff0000';
