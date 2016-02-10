@@ -75,6 +75,7 @@ window.addEventListener('load', function() {
 var lightSpeed = 0.3;
 var relativity = false;
 var rotation = false;
+var inverse = false;
 var time = 0;
 
 function timerProc(){
@@ -94,6 +95,11 @@ this.submitC = function(){
 	if(check === undefined)
 		return;
 	relativity = check.checked;
+
+	check = document.getElementById("InverseCheck");
+	if(check === undefined)
+		return;
+	inverse = check.checked;
 
 	var edit = document.getElementById("CEdit");
 	if(edit === undefined)
@@ -117,7 +123,10 @@ function draw() {
 	}
 
 	// Draw axes and grid
-	function drawAxes(mat, xhat, yhat, dash){
+	function drawAxes(mat, dash){
+		var yhat = matvp(mat, yhat0);
+		var xhat = matvp(mat, xhat0);
+
 		ctx.strokeStyle = dash ? "#0000ff" : "#000000";
 		ctx.lineWidth = 2;
 
@@ -195,6 +204,7 @@ function draw() {
 	var worldMat = [1, 0, 0, -1, offset, height - offset];
 
 	var mat;
+	var imat = [1,0,0,1,0,0];
 	if(rotation){
 		var angle = 0.1 * Math.PI;
 		mat = [Math.cos(angle), -Math.sin(angle), Math.sin(angle), Math.cos(angle), 0, 0];
@@ -205,6 +215,14 @@ function draw() {
 	}
 	else
 		mat = [1, 0, lightSpeed, 1, 0, 0];
+
+	if(inverse){
+		imat = mat.slice();
+		imat[1] = -mat[1];
+		imat[2] = -mat[2];
+		mat = [1,0,0,1,0,0];
+	}
+
 
 	var prodMat = matmp(worldMat, mat);
 
@@ -219,15 +237,18 @@ function draw() {
 	ctx.fillStyle = "#ffff7f";
 	ctx.fill();
 
-	setIdentity();
+	// Base position of moving frame of reference seen from A
+	var abase = [offset + matvp(imat, vecscale(yhat0, time / 10 / mat[0]))[0], 80];
+
+	// Set transform matrix for Lorenz contraction
+	ctx.setTransform(!rotation && inverse && relativity ? 1 / beta : 1,0,0,1, abase[0], 0);
 
 	// Draw person A (on fixed frame of reference)
-	drawPerson([offset - 30, 80], "A", "#000000");
+	drawPerson([-30, 80], "A", "#000000");
 
-	drawAxes([1,0,0,1,0,0], xhat0, yhat0);
+	setIdentity();
 
-	var yhat = matvp(mat, yhat0);
-	var xhat = matvp(mat, xhat0);
+	drawAxes(imat);
 
 	// Current time coordinate
 	var cur = time / 10 * yaxis;
@@ -236,7 +257,7 @@ function draw() {
 	var bbase = [offset + matvp(mat, vecscale(yhat0, time / 10 / mat[0]))[0], 60];
 
 	// Set transform matrix for Lorenz contraction
-	ctx.setTransform(!rotation && relativity ? 1 / beta : 1,0,0,1, bbase[0], 0);
+	ctx.setTransform(!rotation && !inverse && relativity ? 1 / beta : 1,0,0,1, bbase[0], 0);
 
 	// Draw person B and the board he's riding (on moving frame of reference)
 	drawPerson([30, bbase[1]], "B", "#0000ff");
@@ -258,7 +279,7 @@ function draw() {
 	// Restore default transformation
 	setIdentity();
 
-	drawAxes(mat, xhat, yhat, true);
+	drawAxes(mat, true);
 
 	// Draw current time line in red
 	ctx.strokeStyle = '#ff0000';
